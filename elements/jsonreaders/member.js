@@ -1,15 +1,16 @@
 import fs from 'fs'
+import path from 'path';
 
 
 let MEMBERS={}
-
-if(fs.existsSync('members.json')){
-  MEMBERS=JSON.parse(fs.readFileSync('members.json','utf-8'))
+const fileMember = path.join(process.cwd(), 'members.json');
+if(fs.existsSync(fileMember)){
+  MEMBERS=JSON.parse(fs.readFileSync(fileMember,'utf-8'))
   
   
 }
 function memberQoshish(){
-  fs.writeFileSync('members.json', JSON.stringify(MEMBERS,null,2),'utf-8')
+  fs.writeFileSync(fileMember, JSON.stringify(MEMBERS,null,2),'utf-8')
 }
 
 

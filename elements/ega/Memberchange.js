@@ -1,106 +1,101 @@
-import { Markup } from "telegraf"
-import {
-    backmenu,
-    bot,
-} from "../../bot.js"
-import {
-    delmess,
-    delmessages
-} from "../funksiyalar/delmess.js"
-import {
-    MEMBERS
-} from "../jsonreaders/member.js"
-import fs from "fs"
+import { bot, backmenu } from "../../bot.js";
+import { delmess, delmessages } from "../funksiyalar/delmess.js";
+import { MEMBERS } from "../jsonreaders/member.js";
 
 export default function () {
-    
-    
-    bot.action('member_change', async (ctx) => {
-        delmess(ctx)
-        let memberlist='Egalar\\=\\=\\=\\=\\>\\\n'
-        for(let m in MEMBERS){
-            if(MEMBERS[m].turi=="ega"){
-                memberlist+=`Username: [${MEMBERS[m].name.replace(".","\\.").replace("_","\\_").replace("*","\\*").replace("-","\\-").replace("`","\\`").replace(">","\\>").replace("#","\\#").replace("+","\\+").replace("~","\\~").replace("=","\\=").replace("|","\\|").replace("{","\\{").replace("}","\\}").replace("!","\\!")}](tg://user?id=${m}), id: *${m}*\n`
+
+    bot.callbackQuery("member_change", async (ctx) => {
+        await delmess(ctx);
+
+        let memberlist = "Egalar\\=\\=\\=\\=\\>\\\n";
+        for (let m in MEMBERS) {
+            if (MEMBERS[m].turi === "ega") {
+                const nameEscaped = MEMBERS[m].name
+                    .replace(/([._*[\]()~`>#+\-=|{}!])/g, '\\$1')
+                memberlist += `Username: [${nameEscaped}](tg://user?id=${m}), id: *${m}*\n`;
             }
         }
-        memberlist+="\nAdminlar\\=\\=\\=\\=\\>\n"
-        for(let m in MEMBERS){
-            if(MEMBERS[m].turi=="admin"){
-                memberlist+=`Username: [${MEMBERS[m].name.replace(".","\\.").replace("_","\\_").replace("*","\\*").replace("-","\\-").replace("`","\\`").replace(">","\\>").replace("#","\\#").replace("+","\\+").replace("~","\\~").replace("=","\\=").replace("|","\\|").replace("{","\\{").replace("}","\\}").replace("!","\\!")}](tg://user?id=${m}), id: *${m}*\n`
+
+        memberlist += "\nAdminlar\\=\\=\\=\\=\\>\n";
+        for (let m in MEMBERS) {
+            if (MEMBERS[m].turi === "admin") {
+                const nameEscaped = MEMBERS[m].name
+                    .replace(/([._*[\]()~`>#+\-=|{}!])/g, '\\$1')
+                memberlist += `Username: [${nameEscaped}](tg://user?id=${m}), id: *${m}*\n`;
             }
         }
-        const Mlist=JSON.stringify(MEMBERS)
-        ctx.reply(memberlist,{parse_mode:'MarkdownV2'})
-        fs.writeFileSync('Memberlist.txt',Mlist,'utf-8')
-        await ctx.replyWithDocument({source:"Memberlist.txt",filename:"Bot-foydalanuchilari.txt"})
 
-        if(!ctx.session) ctx.session={}
-        const msg = await ctx.reply("A'zo idsini kiriting:", Markup.inlineKeyboard(backmenu))
-        delmessages.set(ctx.chat.id, msg)
-        ctx.session.step="memberid"
-    })
+        await ctx.reply(memberlist, { parse_mode: "MarkdownV2" });
 
-    bot.on('text', async (ctx,next) => {
-        //Kanal qo'shish 
+        if (!ctx.session) ctx.session = {};
+        const msg = await ctx.reply("A'zo idsini kiriting:", {
+            reply_markup: { inline_keyboard: backmenu.inline_keyboard }
+        });
+        delmessages.set(ctx.chat.id, msg);
+        ctx.session.step = "memberid";
 
+        await ctx.answerCallbackQuery();
+    });
 
-        console.log(ctx.session);
-        if (ctx.session.step=="memberid") {
-            
-            const id = Number(ctx.message.text)
-            delmess(ctx)
+    bot.on("message:text", async (ctx, next) => {
+        if (!ctx.session) ctx.session = {};
 
+        if (ctx.session.step === "memberid") {
+            const id = Number(ctx.message.text);
+            await delmess(ctx);
 
-            const arr = MEMBERS[id]
-            if (arr === undefined) {
-                const msg = await ctx.reply("Bu id egasi bot Foydalanuvchisi emas", Markup.inlineKeyboard(
-                    backmenu))
-                delmessages.set(ctx.chat.id, msg)
+            const user = MEMBERS[id];
+            if (!user) {
+                const msg = await ctx.reply("Bu id egasi bot Foydalanuvchisi emas", {
+                    reply_markup: { inline_keyboard: backmenu.inline_keyboard }
+                });
+                delmessages.set(ctx.chat.id, msg);
             } else {
-                const msg = await ctx.reply(
-                    `Foydalanuvchi:  ${arr.name} \n Turi :  ${arr.turi} \n \n O'zgartirish:`, Markup
-                    .inlineKeyboard([
-                        [Markup.button.callback("Ega", `memberch_ega_${id}`)],
-                        [Markup.button.callback("Admin", `memberch_admin_${id}`)],
-                        [Markup.button.callback("Premium", `memberch_premium_${id}`)],
-                        [Markup.button.callback("Foydalanuvchi", `memberch_member_${id}`)], backmenu
-                    ]))
-                delmessages.set(ctx.chat.id, msg)
-                console.log(msg);
-
+                const msg = await ctx.reply(`Foydalanuvchi: ${user.name}\nTuri: ${user.turi}\n\nO'zgartirish:`, {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: "Ega", callback_data: `memberch_ega_${id}` }],
+                            [{ text: "Admin", callback_data: `memberch_admin_${id}` }],
+                            [{ text: "Premium", callback_data: `memberch_premium_${id}` }],
+                            [{ text: "Foydalanuvchi", callback_data: `memberch_member_${id}` }],
+                            ...backmenu.inline_keyboard
+                        ]
+                    }
+                });
+                delmessages.set(ctx.chat.id, msg);
             }
-
         }
-        return next()
 
-    })
+        return next();
+    });
 
-    bot.on('callback_query', async (ctx,next) => {
-        const data = ctx.callbackQuery.data
-
+    bot.on("callback_query", async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
 
         if (data.startsWith("memberch_")) {
-            delmess(ctx)
+            await delmess(ctx);
             try {
-                const d = data.split('memberch_')[1]
-                const status = d.split("_")[0]
-                const id = d.split("_")[1]
-                MEMBERS[id].turi = status
-                const w = await bot.telegram.sendMessage(id,
-                    `Sizning statusingiz <b>${status.toUpperCase()}</b>ga o'zgartirildi!!!`, {
+                const [status, id] = data.split("memberch_")[1].split("_");
+                MEMBERS[id].turi = status;
+                try{
+                    await ctx.api.sendMessage(id, `Sizning statusingiz <b>${status.toUpperCase()}</b> ga o'zgartirildi!!!`, {
                         parse_mode: "HTML"
-                    })
-                console.log(w);
+                    });
 
-                const msg = await ctx.reply("O'zgartirildi", Markup.inlineKeyboard(backmenu))
-                delmessages.set(ctx.chat.id, msg)
-            } catch (er) {
-                console.log(er);
+                }catch(error){
 
+                }
+
+                const msg = await ctx.reply("O'zgartirildi", {
+                    reply_markup: { inline_keyboard: backmenu.inline_keyboard }
+                });
+                delmessages.set(ctx.chat.id, msg);
+            } catch (err) {
+                console.error(err);
             }
-
         }
-        return next()
-    })
-    
+
+        await ctx.answerCallbackQuery();
+        return next();
+    });
 }

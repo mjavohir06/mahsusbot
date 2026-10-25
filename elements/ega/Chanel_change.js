@@ -1,145 +1,179 @@
-import {
-
-    bot,
-    backmenu
-} from "../../bot.js";
-import {
-    chanelochirish,
-    chanelqoshish,
-    CHANNELS,
-    natija
-} from "../jsonreaders/chanel.js";
-import {
-    delmess,
-    delmessages
-} from "../funksiyalar/delmess.js";
-import {
-    Markup
-} from "telegraf";
+import { bot, backmenu } from "../../bot.js";
+import { chanelochirish, chanelqoshish, chanelsonichange, CHANNELS, natija } from "../jsonreaders/chanel.js";
+import { delmess, delmessages } from "../funksiyalar/delmess.js";
 import { obunami } from "../funksiyalar/obunatek.js";
+import { InlineKeyboard } from "grammy";
 
 export default function () {
+    // Kanal sozlamalari
+    bot.callbackQuery("setting_sub", async (ctx) => {
+        if (!ctx.session) ctx.session = {};
 
-
-    bot.action('setting_sub', async (ctx) => {
-        obunami(ctx)
-        let kanal = ''
+        let kanal = "";
         for (let ch of CHANNELS) {
-            if (ch.username == "boshqa") {
-                kanal = kanal + `\n ${ch.name}: ${ch.link} || Boshqa tarmoq`
-            } else {
-
-                kanal = kanal + ` ${ch.name}: ${ch.link} || Telegram \n`
-            }
+            kanal += ch.username === "boshqa"
+                ? `\n ${ch.name}: ${ch.link}, kerak: ${ch.soni} obunachi || Boshqa tarmoq`
+                : ` ${ch.name}: ${ch.link}, kerak: ${ch.soni} obunachi || Telegram \n`;
         }
 
         const obj = {
             chanel_plus: "➕ Kanal qo'shish",
-            chanel_minus: "➖ Kanal olib tashlansh",
+            chanel_minus: "➖ Kanal olib tashlash",
             chanel_soni: "🔢 Kanal obuna sonini o'zgartirish",
             check_sub: "🔙 Bosh menuga qaytish"
-        }
-        const button = []
-        for (let o in obj) {
-            button.push([Markup.button.callback(obj[o], o)])
-        }
-        const msg = await ctx.reply(`Kanallar:\n \n ${kanal} \n Majburiy kanal sozlamalari: `, Markup
-            .inlineKeyboard(button))
-        delmess(ctx)
-        delmessages.set(ctx.chat.id, msg)
+        };
+
+        const button = Object.entries(obj).map(([key, value]) => [{ text: value, callback_data: key }]);
+        const msg = await ctx.reply(`Kanallar:\n\n${kanal}\nMajburiy kanal sozlamalari:`, {
+            reply_markup: { inline_keyboard: button }
+        });
+        await delmess(ctx);
+        delmessages.set(ctx.chat.id, msg);
+        await ctx.answerCallbackQuery();
     });
 
-    //Majburi a'zo kanalini qo'shish
-    bot.action('chanel_plus', async (ctx) => {
-        obunami(ctx)
-        const msg = await ctx.reply("Kanal turini tanlang:", Markup.inlineKeyboard([
-            [Markup.button.callback("Ochiq kanal", 'chanel_type_oy')],
-            [Markup.button.callback("Yopiq kanal", 'chanel_type_my')],
-            [Markup.button.callback("Boshqa", 'chanel_type_boshqa')], backmenu
-        ]))
-        delmess(ctx)
-        delmessages.set(ctx.chat.id, msg)
-    })
-    //Majburiy a'zo kanali o'zgartirish
-    bot.action('chanel_minus', async (ctx) => {
-        obunami(ctx)
-        let kanal = ''
-        const kanal2 = []
-        for (let i = 0; CHANNELS.length > i; i++) {
-            let ch = CHANNELS[i]
-            if (ch.username == "boshqa") {
-                kanal = kanal + `\n ${ch.name}: ${ch.link} || Boshqa tarmoq`
-            } else {
-
-                kanal = kanal + ` ${ch.name}: ${ch.link} || Telegram \n`
-            }
-
-            kanal2.push([Markup.button.callback(ch.link, `chanel_change_${i}`)])
-        }
-        kanal2.push(backmenu)
-        const msg = await ctx.reply(
-            `Kanallar:\n \n ${kanal} \n O'chirilishi kerak bo'lgan kanaldi tanlang: `,
-            Markup.inlineKeyboard(kanal2))
-        delmess(ctx)
-        delmessages.set(ctx.chat.id, msg)
-    })
-
-
-
-
-
-
-    // chanel_change
-    bot.on('text', async (ctx, next) => {
-        let msg2
-        if (ctx.session.step == "kanallinki") {
-            if (ctx.session.turi) {
-
-                chanelqoshish(ctx.session.nomi, ctx.message.text, ctx.session.turi, 5000)
-                let msg
-                if (natija === 1) {
-                    msg = await ctx.reply("✅ Kanal qo'shildi", Markup.inlineKeyboard([backmenu]))
-                } else {
-                    msg = await ctx.reply("❌ Kanal linkida muammo bor!!!", Markup.inlineKeyboard([
-                        backmenu
-                    ]))
-                }
-                delmess(ctx)
-                delmessages.set(ctx.chat.id, msg)
-                ctx.session.turi = undefined
-            }
-            ctx.session.step = undefined
+    // Kanal qo'shish
+    bot.callbackQuery("chanel_plus", async (ctx) => {
+        const keyboard = new InlineKeyboard()
+            .text("Telegram kanal yoki guruh", "chanel_type_telegram")
+            .text("Boshqa turdagi tarmoq", "chanel_type_boshqa")
+            .row()
+            .text("🔙 Bosh menuga qaytish", "check_sub");
+            console.log(keyboard);
             
-        } else if (ctx.session.step == "kanalnomi") {
-            ctx.session.nomi = ctx.message.text
-            msg2 = await ctx.reply("Kanal linkini kiriting:", Markup.inlineKeyboard([backmenu]))
-            ctx.session.step = "kanallinki"
-            delmess(ctx)
-            delmessages.set(ctx.chat.id, msg2)
-            console.log(ctx.session.step);
+        const msg = await ctx.reply("Kanal turini tanlang:", { reply_markup: keyboard });
+        await delmess(ctx);
+        delmessages.set(ctx.chat.id, msg);
+        await ctx.answerCallbackQuery();
+    });
 
+    // Kanal o'chirish
+    bot.callbackQuery("chanel_minus", async (ctx) => {
+        let kanalText = "";
+        const keyboard = [];
+        for (let i = 0; i < CHANNELS.length; i++) {
+            const ch = CHANNELS[i];
+            kanalText += ch.username === "boshqa"
+                ? `\n ${ch.name}: ${ch.link}, soni: ${ch.soni} || Boshqa tarmoq`
+                : ` ${ch.name}: ${ch.link}, soni: ${ch.soni} || Telegram \n`;
+            keyboard.push([{ text: ch.link, callback_data: `chanel_change_${i}` }]);
+        }
+        keyboard.push([{text:"🔙 Bosh menuga qaytish",callback_data:"check_sub"}]);
+
+        const msg = await ctx.reply(`Kanallar:\n\n${kanalText}\nO'chirilishi kerak bo'lgan kanalni tanlang:`, {
+            reply_markup: { inline_keyboard: keyboard }
+        });
+        await delmess(ctx);
+        delmessages.set(ctx.chat.id, msg);
+        await ctx.answerCallbackQuery();
+    });
+
+    // Kanal obuna sonini o'zgartirish
+    bot.callbackQuery("chanel_soni", async (ctx) => {
+        let kanalText = "";
+        const keyboard = [];
+        for (let i = 0; i < CHANNELS.length; i++) {
+            const ch = CHANNELS[i];
+            kanalText += ch.username === "boshqa"
+                ? `\n ${ch.link}: ${ch.soni} || Boshqa tarmoq`
+                : ` ${ch.link}: ${ch.soni} || Telegram \n`;
+            keyboard.push([{ text: ch.link, callback_data: `chanel_chsoni_${i}` }]);
+        }
+        keyboard.push([{text:"🔙 Bosh menuga qaytish",callback_data:"check_sub"}]);
+
+        const msg = await ctx.reply(`Kanallar:\n\n${kanalText}\nSonini o'zgartirish kerak bo'lgan kanalni tanlang:`, {
+            reply_markup: { inline_keyboard: keyboard }
+        });
+        await delmess(ctx);
+        delmessages.set(ctx.chat.id, msg);
+        await ctx.answerCallbackQuery();
+    });
+
+    // Text input orqali kanal qo'shish va sonini o'zgartirish
+    bot.on("message:text", async (ctx, next) => {
+        if (!ctx.session) ctx.session = {};
+        let msg;
+        const step = ctx.session.step;
+
+        if (step === "kanalid") {
+            const son = parseInt(ctx.message.text);
+            if (!isNaN(son)) {
+                chanelqoshish(ctx.session.nomi, ctx.session.kanallinki, ctx.session.turi, 2000, son);
+                msg = natija === 1
+                    ? await ctx.reply("Kanal default(2000) son bilan qo'shildi. O'zgartirish uchun kanal sonini kiriting,yoki Bosh menuga qayting", { reply_markup: backmenu })
+                    : await ctx.reply("❌ Kanal linkida muammo bor!!!", { reply_markup: backmenu });
+                ctx.session.step = "chanelsoni";
+            } else {
+                msg = await ctx.reply("Id son bo'lishi kerak!!!", { reply_markup: backmenu });
+            }
+            await delmess(ctx);
+            delmessages.set(ctx.chat.id, msg);
+
+        } else if (step === "kanallinki") {
+            if (ctx.session.turi === "boshqa") {
+                chanelqoshish(ctx.session.nomi, ctx.message.text, ctx.session.turi, 2000);
+                msg = natija === 1
+                    ? await ctx.reply("Kanal default(2000) son bilan qo'shildi. O'zgartirish uchun Son o'zgartirish tugmasidan foydalaning", { reply_markup: backmenu })
+                    : await ctx.reply("❌ Kanal linkida muammo bor!!!", { reply_markup: backmenu });
+                await delmess(ctx);
+                delmessages.set(ctx.chat.id, msg);
+            } else if (ctx.session.turi === "telegram") {
+                ctx.session.kanallinki = ctx.message.text;
+                msg = await ctx.reply("Telegram Kanal/Guruh idsini kiriting:", { reply_markup: backmenu });
+                ctx.session.step = "kanalid";
+                await delmess(ctx);
+                delmessages.set(ctx.chat.id, msg);
+            }
+
+        } else if (step === "kanalnomi") {
+            ctx.session.nomi = ctx.message.text;
+            msg = await ctx.reply("Kanal linkini kiriting:", { reply_markup: backmenu });
+            ctx.session.step = "kanallinki";
+            await delmess(ctx);
+            delmessages.set(ctx.chat.id, msg);
+
+        } else if (step === "chanelsoni") {
+            const son = parseInt(ctx.message.text);
+            const indexlink = parseInt(ctx.session.soni);
+            chanelsonichange(ctx, CHANNELS[indexlink].link, son);
+            msg = ctx.session.natija === "fail"
+                ? await ctx.reply("❌ Sonda muammo bor", { reply_markup: backmenu })
+                : await ctx.reply("✅ Soni o'zgartirildi", { reply_markup: backmenu });
+            await delmessages.set(ctx.chat.id, msg);
+            await delmess(ctx);
         }
 
-        return next()
-    })
-    bot.on('callback_query', async (ctx, next) => {
-        const data = ctx.callbackQuery.data
+        return next();
+    });
+
+    // Callback query orqali turli kanal amallari
+    bot.on("callback_query", async (ctx, next) => {
+        const data = ctx.callbackQuery.data;
         if (data.startsWith("chanel_type_")) {
-            delmess(ctx)
-            ctx.session.turi = data.split("chanel_type_")[1]
-            const msg = await ctx.reply("Kanal nomini kiriting:", Markup.inlineKeyboard([backmenu]))
-            delmessages.set(ctx.chat.id, msg)
-            ctx.session.step = "kanalnomi"
-            console.log(ctx.session.step);
+            await delmess(ctx);
+            ctx.session.turi = data.split("chanel_type_")[1];
+            const msg = await ctx.reply("Kanal nomini kiriting:", { reply_markup: backmenu });
+            ctx.session.step = "kanalnomi";
+            delmessages.set(ctx.chat.id, msg);
+        }
 
-        }
         if (data.startsWith("chanel_change_")) {
-            delmess(ctx)
-            const indexlink = parseInt(data.split("chanel_change_")[1])
-            chanelochirish(CHANNELS[indexlink].link)
-            const msg = await ctx.reply("✅Bot o'chirildi", Markup.inlineKeyboard([backmenu]))
-            delmessages.set(ctx.chat.id, msg)
+            await delmess(ctx);
+            const indexlink = parseInt(data.split("chanel_change_")[1]);
+            chanelochirish(CHANNELS[indexlink].link);
+            const msg = await ctx.reply("✅ Bot o'chirildi", { reply_markup: backmenu });
+            delmessages.set(ctx.chat.id, msg);
         }
-        return next()
-    })
+
+        if (data.startsWith("chanel_chsoni_")) {
+            await delmess(ctx);
+            ctx.session.soni = parseInt(data.split("chanel_chsoni_")[1]);
+            ctx.session.step = "chanelsoni";
+            const msg = await ctx.reply("Yangi sonni kiriting (cheksiz uchun manfiy son):", { reply_markup: backmenu });
+            delmessages.set(ctx.chat.id, msg);
+        }
+
+        await ctx.answerCallbackQuery();
+        return next();
+    });
 }

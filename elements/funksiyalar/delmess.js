@@ -1,29 +1,22 @@
-import { bott,bot } from "../../bot.js"
+import { bott, bot } from "../../bot.js";
 
- const delmessages=new Map()
+const delmessages = new Map();
 
-
-
-// habarlarni o'chirish --------------🗑️🗑️🗑️🗑️🗑️🗑️🗑️🚮🚮🚮🚮🚮-----------------------------------------//
-
-    async function delmess(ctx){
-        try{
-            const userId=ctx.chat.id
-            await bot.telegram.deleteMessage(userId,delmessages.get(userId).message_id)
-            console.log(`${userId}: ${delmessages.get(userId).message_id} o'chirildi`);
-            
-        }catch{
-            console.log("Xato ");
-            
-            
+// Habarlarni o'chirish function
+async function delmess(ctx) {
+    try {
+        if(delmessages.get(ctx.chat.id)){
+            const userId = ctx.chat.id;
+            const msg = delmessages.get(userId);
+            if (msg && msg.message_id) {
+                await ctx.api.deleteMessage(userId, msg.message_id);
+                
+            }
+            delmessages.set(userId,undefined)
         }
-    
-    }
-
-    
-    
+    } catch (error) {
         
-    
-    
+    }
+}
 
-export {delmessages,delmess}
+export { delmessages, delmess };

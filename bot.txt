@@ -1,11 +1,12 @@
+//   Shift+Alt+F  - codelarni To'g'ri joylashtirib beradi.
 
-{
-  "name": "Mahsus kanal",
-  "link": "https://t.me/mahsus06bot",
-  "username": "@mahsus06bot",
-  "soni":"cheksiz"
-}
+https://chatgpt.com/c/6925ad73-23d8-8332-9b98-e29940411c22
 
+
+
+
+// Callback query ni javobsiz qoldirmaslik
+// await ctx.answerCallbackQuery();
 
 
 

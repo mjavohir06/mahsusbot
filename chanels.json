@@ -1,14 +1,9 @@
 [
   {
-    "name": "kanal",
-    "link": "https://t.me/mahsus06bot",
-    "username": "@mahsus06bot",
-    "soni": 5000
-  },
-  {
-    "name": "kanal2",
-    "link": "https://t.me/kanallar",
-    "username": "@kanallar",
-    "soni": 5000
+    "name": "Animelar uz",
+    "link": "https://t.me/animelar_uz_amane",
+    "username": "telegram",
+    "id": "-1003200435083",
+    "soni": -1
   }
 ]

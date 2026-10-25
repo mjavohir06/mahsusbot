@@ -2,13 +2,18 @@ import fs from 'fs'
 import {
     bot
 } from '../../bot.js'
+import { MEMBERS } from './member.js'
+import path from 'path';
+
 
 
 
 let CHANNELS = []
-if (fs.existsSync('chanels.json')) {
-    CHANNELS = JSON.parse(fs.readFileSync('chanels.json', 'utf-8'))
-}
+const fileChanel = path.join(process.cwd(), 'chanels.json');
+    if (fs.existsSync(fileChanel)) {
+        CHANNELS = JSON.parse(fs.readFileSync(fileChanel, 'utf-8'))
+    }
+
 
 
 
@@ -25,11 +30,11 @@ if (fs.existsSync('chanels.json')) {
 
 //chanel.json fayli bilan bog'liq amalyotlar va funksiyalar
 let natija = 2 //1- muammo yo'q ; 0- linkda xatolik; 2-boshlang'ich natija 
-async function chanelqoshish(nomi, linki, turi, soni) { //iki tur bor:ommaviy (oy) va maxviy (my)
+async function chanelqoshish(nomi, linki, turi, soni,id) { //iki tur bor:ommaviy (oy) va maxviy (my)
     const data = CHANNELS
 
     let link
-    if (linki.includes('@')) {
+    if (linki.includes('@') && turi!=="boshqa") {
         link = linki.split('@')
         if (link[0] !== '') {
             natija = 0
@@ -38,7 +43,7 @@ async function chanelqoshish(nomi, linki, turi, soni) { //iki tur bor:ommaviy (o
 
             natija = 1
         }
-    } else if (linki.includes('https://t.me/')) {
+    } else if (linki.includes('https://t.me/') && turi!=="boshqa") {
         link = linki.split('https://t.me/')
         if (link[0] !== '') {
             natija = 0
@@ -46,29 +51,33 @@ async function chanelqoshish(nomi, linki, turi, soni) { //iki tur bor:ommaviy (o
 
             natija = 1
         }
-    } else {
+    } else if(turi=="boshqa" && linki.includes('https://')){
+        link = linki.split('https://')
+        if (link[0] !== '' && !link[1].includes('.')) {
+            natija = 0
+        } else {
+            natija = 1
+        }
+    }
+
+     else {
         natija = 0
     }
+    
     if (natija == 1) {
-        if (turi == 'oy') {
+        if (turi == 'telegram') {
+            const idsi=String(id).startsWith("-100")? String(id) :"-100"+String(id)
+            console.log(idsi);
+            
             const chan = {
                 "name": nomi,
                 "link": "https://t.me/" + link[1],
-                "username": "@" + link[1],
+                "username": "telegram",
+                "id":idsi,
                 "soni": soni
             }
             data.push(chan)
-            fs.writeFileSync('chanels.json', JSON.stringify(data, null, 2), 'utf-8')
-
-        } else if (turi == 'my') {
-            const chan = {
-                "name": nomi,
-                "link": "https://t.me/" + link[1],
-                "username": null,
-                "soni": soni
-            }
-            data.push(chan)
-            fs.writeFileSync('chanels.json', JSON.stringify(data, null, 2), 'utf-8')
+            fs.writeFileSync(fileChanel, JSON.stringify(data, null, 2), 'utf-8')
         } else if (turi == 'boshqa') {
             const chan = {
                 "name": nomi,
@@ -77,15 +86,39 @@ async function chanelqoshish(nomi, linki, turi, soni) { //iki tur bor:ommaviy (o
                 "soni": soni
             }
             data.push(chan)
-            fs.writeFileSync('chanels.json', JSON.stringify(data, null, 2), 'utf-8')
+            fs.writeFileSync(fileChanel, JSON.stringify(data, null, 2), 'utf-8')
         }
+        CHANNELS=data
 
     }
 
 }
 
 
+function chanelsonichange(ctx,linki,soni){
+    if(!ctx.session) ctx.session={}
+    if(!isNaN(soni)){        
+        const data = CHANNELS.filter(u => u.link !== linki)
+        const data2 = CHANNELS.filter(u => u.link === linki)
+        data2[0].soni=soni
+        data.unshift(data2[0])
+        
+        fs.writeFileSync(fileChanel, JSON.stringify(data, null, 2), 'utf-8')
+        ctx.session.natija="success"
+        CHANNELS=data
+    }else{
+        ctx.session.natija="fail"
+    }
+    
+}
 
+function chanelsaqla(){
+    try{
+        fs.writeFileSync(fileChanel, JSON.stringify(CHANNELS, null, 2), 'utf-8')
+    }catch(error){
+        console.log("error");
+    }
+}
 
 
 
@@ -102,8 +135,7 @@ async function chanelqoshish(nomi, linki, turi, soni) { //iki tur bor:ommaviy (o
 //Kanalni o'chirish
 function chanelochirish(linki) {
     const data = CHANNELS.filter(u => u.link !== linki)
-    console.log(linki + '\n' + data);
-
+    CHANNELS=data
     fs.writeFileSync('chanels.json', JSON.stringify(data, null, 2), 'utf-8')
 }
 
@@ -119,5 +151,7 @@ export {
     CHANNELS,
     natija,
     chanelochirish,
-    chanelqoshish
+    chanelqoshish,
+    chanelsonichange,
+    chanelsaqla
 };

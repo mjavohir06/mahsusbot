@@ -1,175 +1,143 @@
-import {
-    CHANNELS
-} from "../jsonreaders/chanel.js";
-import  {
-    delmessages,
-    delmess
-} from "./delmess.js";
-import {
-    userId,
-    bot
-} from "../../bot.js";
-import {
-    Telegraf,
-    Markup
-} from 'telegraf'
-import {
-    MEMBERS
-} from "../jsonreaders/member.js";
-import fs from "fs"
-
-async function chanelid(username) {
-
-    try {
-        const chat = await bot.telegram.getChat(username);
-        return chat.id
-    } catch (err) {
-        return "error"
-    }
-}
+import { chanelsaqla, CHANNELS } from "../jsonreaders/chanel.js";
+import { delmessages, delmess } from "./delmess.js";
+import { bot, backmenu, userId } from "../../bot.js";
+import { memberQoshish, MEMBERS } from "../jsonreaders/member.js";
+import fs from "fs";
+import { qaytaol, yukla } from "../admin/messagetomembers.js";
+import { textliner } from "../foydalanuvchi/Animesearchwithcod.js";
 
 async function obunami(ctx) {
-    if(!ctx.session) ctx.session={}
-    let unsubscribed = []
-    
+    if (!ctx.session) ctx.session = {};
+    let unsubscribed = [];
+
     for (let ch of CHANNELS) {
-        if (ch.username) {
-            if (ch.username !== "boshqa") {
-                try {
-                    const member = await ctx.telegram.getChatMember(ch.username, ctx.from.id);
-                    if (!['member', 'administrator', 'creator'].includes(member.status)) {
-                        unsubscribed.push(ch);
-                    }
-                } catch {
+        if (ch.username === "telegram") {
+            try {
+                const member = await ctx.api.getChatMember(ch.id, ctx.from.id);
+                if (!['member', 'administrator', 'creator'].includes(member.status)) {
                     unsubscribed.push(ch);
                 }
-            } 
-        } else {
-            if (ch.username !== "boshqa") {
-                const id = await chanelid(ch.link.split("@")[1])
-                try {
-                    let member = await ctx.telegram.getChatMember(id, ctx.from.id);
-
-                } catch (err) {
-                    unsubscribed.push(ch)
-                }
+            } catch {
+                unsubscribed.push(ch);
             }
         }
     }
-    if(unsubscribed.length!==0){
-        if(MEMBERS[ctx.from.id].turi!=="member"){
-        }else{
-            ctx.session.obunami=false
-            obunatek(ctx)
-            ctx.session.step=undefined
-            ctx.session.nomi=undefined            
 
-        }
-    }else{
-        
-        
-        ctx.session.obunami=true
+    if (unsubscribed.length !== 0 && MEMBERS[ctx.from.id].turi === "member") {
+        ctx.session.obunami = false;
+        await obunatek(ctx);
+        ctx.session.step = undefined;
+        ctx.session.nomi = undefined;
+    } else {
+        ctx.session.obunami = true;
     }
 }
 
-
 async function obunatek(ctx) {
-    if(!ctx.session) ctx.session={}
-    let unsubscribed = []
-    ctx.session.step=undefined
-    ctx.session.nomi=undefined  
-    for (let ch of CHANNELS) {
-        if (ch.username) {
-            if (ch.username !== "boshqa") {
-                try {
-                    const member = await ctx.telegram.getChatMember(ch.username, ctx.from.id);
-                    if (!['member', 'administrator', 'creator'].includes(member.status)) {
-                        unsubscribed.push(ch);
-                    }
-                } catch {
-                    unsubscribed.push(ch);
-                }
-            } 
-        } else {
-            if (ch.username !== "boshqa") {
-                const id = await chanelid(ch.link.split("@")[1])
-                try {
-                    let member = await ctx.telegram.getChatMember(id, ctx.from.id);
+    if (!ctx.session) ctx.session = {};
+    yukla();
+    await delmess(ctx);
+    try {
+        await ctx.editMessageReplyMarkup({
+            inline_keyboard: []
+        })
+    } catch { }
+    let unsubscribed = [];
+    ctx.session.step = undefined;
+    ctx.session.nomi = undefined;
+    ctx.session.turi = undefined;
+    ctx.session.step2 = undefined
+    ctx.session.anime_phototuri = undefined
+    ctx.session.anime_number = 0
 
-                } catch (err) {
-                    unsubscribed.push(ch)
+
+    let ObunaSet;
+    if (MEMBERS[ctx.from.id]) {
+        ObunaSet = new Set(MEMBERS[ctx.from.id].obunalar);
+    }
+
+    for (let ch of CHANNELS) {
+        if (ch.username === "telegram") {
+            try {
+                const member = await ctx.api.getChatMember(ch.id, ctx.from.id);
+                if (!['member', 'administrator', 'creator'].includes(member.status) && ch.soni !== 0) {
+                    unsubscribed.push(ch);
+                    if (ObunaSet?.has(ch.link) && ch.soni > 0) {
+                        ch.soni += 1;
+                        ObunaSet.delete(ch.link);
+                        MEMBERS[ctx.from.id].obunalar = [...ObunaSet];
+                    }
+                } else {
+                    if (ObunaSet && !ObunaSet.has(ch.link) && ch.soni > 0) {
+                        ch.soni -= 1;
+                        ObunaSet.add(ch.link);
+                        MEMBERS[ctx.from.id].obunalar = [...ObunaSet];
+                    }
                 }
+            } catch {
+                unsubscribed.push(ch);
             }
         }
-    }
-    if(unsubscribed.length>0){
-        for (let ch of CHANNELS) {
-            if(ch.username=="boshqa"){
-                unsubscribed.push(ch)
-            }
-        }
-        
-    }
-    if(MEMBERS[ctx.from.id].turi!=="member"){
-        
-        
-        unsubscribed=[]
     }
 
     if (unsubscribed.length === 0) {
-        ctx.session.obunami=true
-        //Asosiy menu tugmasini nomilari va buyruqlari
-        
-        const objega = {
-            setting_sub: "📢Majburiy kanal sozlamalari",
-            member_change:"A'zolar Statusini o'zgartirish",
-            send_messagetm: "💬Barcha bot a'zolariga habar yuborish"
-        }
-        const objadmin={
-            send_messagetm: "💬Barcha bot a'zolariga habar yuborish"
-        }
-        const menu = []
+        ctx.session.obunami = true;
+        chanelsaqla();
 
-        if (MEMBERS[ctx.chat.id].turi == "ega") {
-            for (let o in objega) {
-                menu.push([Markup.button.callback(objega[o], o)])
+        const objega = [
+            { ega_settings: "Ega sozlamalari" },
+        ];
+        const objadmin = [
+            { admin_settins: "Admin sozlamalari" }
+        ];
+        const objmember = [
+            { search_with_kod: "Kod orqali qidirish", shorts: "Shortlar" },
+            { barchaanimelar:"Barcha anime va kinolarni ko'rish", searchwithphoto:"Photo bilan qidirish"}
+        ]
 
+        objadmin.push(...objmember)
+        objega.push(...objadmin)
+        const menu = [];
+        if (MEMBERS[ctx.chat.id].turi === "ega") {
+            objega.forEach((row) => {
+                menu.push(Object.keys(row).map((k) => ({ text: row[k], callback_data: k })));
+            });
+        } else if (MEMBERS[ctx.chat.id].turi === "admin") {
+            objadmin.forEach((row) => {
+                menu.push(Object.keys(row).map((k) => ({ text: row[k], callback_data: k })));
+            });
+        } else {
+            objmember.forEach((row) => {
+                menu.push(Object.keys(row).map((k) => ({ text: row[k], callback_data: k })));
+            });
+        }
+        menu.push([{text: "Nomi bilan qidirish",switch_inline_query_current_chat: ""}])
+        if (ctx.session.aqism) {
+            if (ctx.session.aqism == 0) {
+                textliner(ctx)
+            } else {
+                textliner(ctx, ctx.session.aqism)
             }
+            ctx.session.aqism = undefined
+        } else {
 
-
-        }else if (MEMBERS[ctx.chat.id].turi == "admin") {
-            for (let o in objadmin) {
-                menu.push([Markup.button.callback(objadmin[o], o)])
-
-            }
-
-
+            const msg = await ctx.reply(
+                "Botga xush kelibsiz.\nBotdan foydalanish uchun quyidagi tugmalarni tanlang",
+                { reply_markup: { inline_keyboard: menu } }
+            );
+            delmessages.set(ctx.chat.id, msg);
         }
-
-        const msg = await ctx.reply("Botga xush  kelibsiz.\n Botdan foydalanish uchun quyidagi tugmalarni tanlang",
-            Markup.inlineKeyboard(menu));
-        delmess(ctx)
-        delmessages.set(ctx.chat.id,msg)
-
-        // fs.writeFileSync('file.txt',"salomlar423 \n \thello",'utf-8')
-        // await ctx.replyWithDocument({source:"file.txt",filename:"file.txt"})
-            
-
     } else {
-        const buttons = unsubscribed.map((ch) => [Markup.button.url(ch.name, ch.link)]);
-
-        buttons.push([Markup.button.callback('✅ Yana tekshirish', 'check_sub')]);
-
+        const buttons = unsubscribed.map((ch) => [{ text: ch.name, url: ch.link }]);
+        buttons.push([{ text: '✅ Yana tekshirish', callback_data: 'check_sub' }]);
 
         const msg = await ctx.reply(
             '⚠️ Hali ham quyidagi kanallarga obuna bo‘lishingiz kerak:',
-            Markup.inlineKeyboard(buttons)
+            { reply_markup: { inline_keyboard: buttons } }
         );
-        delmess(ctx)
-        delmessages.set(ctx.chat.id,msg)
+        delmessages.set(ctx.chat.id, msg);
     }
 }
 
-
-export default obunatek
-export {obunami}
+export default obunatek;
+export { obunami };
